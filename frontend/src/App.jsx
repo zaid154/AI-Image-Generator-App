@@ -7,10 +7,13 @@ import PromptGuide from "./Components/PromptGuide";
 import Pricing from "./Components/Pricing";
 import FAQ from "./Components/FAQ";
 import Footer from "./Components/Footer";
+import LegalModal from "./Components/LegalModal";
 
 function App() {
   const [activeTab, setActiveTab] = useState("generator");
   const [selectedPrompt, setSelectedPrompt] = useState("");
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState("privacy");
 
   const handleSelectPrompt = (prompt) => {
     setSelectedPrompt(prompt);
@@ -20,8 +23,13 @@ function App() {
     setSelectedPrompt("");
   };
 
+  const handleOpenLegal = (tab = "privacy") => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-zinc-100 flex flex-col justify-between antialiased">
+    <div className="min-h-screen bg-[#0a0a0f] text-zinc-100 flex flex-col justify-between antialiased selection:bg-blue-500/30 selection:text-white">
 
       {/* Global Header */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -63,7 +71,14 @@ function App() {
       </main>
 
       {/* Global Footer */}
-      <Footer setActiveTab={setActiveTab} />
+      <Footer onOpenLegal={handleOpenLegal} />
+
+      {/* Legal & Compliance Modal */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalModalTab}
+      />
     </div>
   );
 }

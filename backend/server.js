@@ -21,7 +21,7 @@ async function enhancePrompt(userPrompt) {
         {
           role: "system",
           content:
-            "You are an expert AI image prompt optimizer. Fix all spelling mistakes, typos, grammatical errors, or Hinglish in the user input. Refine it into a vivid, descriptive prompt (under 45 words) with rich visual textures, lighting, and composition. If an airship/flying ship is requested, describe its ornate wooden galleon hull, billowing sails or vintage zeppelin balloon, spinning brass clockwork gears, and warm cinematic lighting. Return ONLY the refined prompt without quotes or preamble.",
+            "You are an expert AI image prompt optimizer for diffusion models (FLUX.1). Fix any spelling mistakes, typos, grammatical errors, or Hinglish keywords in the user's input. Refine the prompt into a vivid, photorealistic or stylistically precise description (under 40 words) specifying subject, lighting, environment, and textures. Return ONLY the refined prompt text without quotation marks, introductions, or explanations.",
         },
         { role: "user", content: userPrompt },
       ],
