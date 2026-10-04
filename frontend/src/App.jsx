@@ -8,6 +8,9 @@ import Pricing from "./Components/Pricing";
 import FAQ from "./Components/FAQ";
 import Footer from "./Components/Footer";
 import LegalModal from "./Components/LegalModal";
+import BackgroundRemover from './Components/Tools/BackgroundRemover';
+import ImageUpscaler from './Components/Tools/ImageUpscaler';
+import ImageCaptioner from './Components/Tools/ImageCaptioner';
 
 function App() {
   const [activeTab, setActiveTab] = useState("generator");
@@ -49,6 +52,15 @@ function App() {
 
         {activeTab === "gallery" && (
           <Gallery
+            onSelectPrompt={handleSelectPrompt}
+            setActiveTab={setActiveTab}
+          />
+        )}
+
+        {activeTab === 'bg-remover' && <BackgroundRemover />}
+        {activeTab === 'upscaler' && <ImageUpscaler />}
+        {activeTab === 'captioner' && (
+          <ImageCaptioner
             onSelectPrompt={handleSelectPrompt}
             setActiveTab={setActiveTab}
           />

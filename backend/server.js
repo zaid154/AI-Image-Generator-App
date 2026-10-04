@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 const hf = new HfInference(process.env.HF_ACCESS_TOKEN);
 
@@ -37,7 +37,7 @@ async function enhancePrompt(userPrompt) {
 
 app.post("/generate-image", async (req, res) => {
   try {
-    const { prompt } = req.body;
+    const { prompt, aspectRatio = '1:1' } = req.body;
 
     if (!prompt || !prompt.trim()) {
       return res.status(400).json({ error: "Prompt is required" });
@@ -53,10 +53,24 @@ app.post("/generate-image", async (req, res) => {
     const enhancedPrompt = await enhancePrompt(prompt.trim());
     console.log(`Original: "${prompt}" -> Enhanced: "${enhancedPrompt}"`);
 
+    const aspectRatioMap = {
+      '1:1': { width: 1024, height: 1024 },
+      '16:9': { width: 1344, height: 768 },
+      '9:16': { width: 768, height: 1344 },
+      '4:3': { width: 1152, height: 896 },
+      '3:4': { width: 896, height: 1152 },
+    };
+
+    const dimensions = aspectRatioMap[aspectRatio] || aspectRatioMap['1:1'];
+
     // Step 2: Generate image using FLUX.1-schnell model
     const imageBlob = await hf.textToImage({
       model: "black-forest-labs/FLUX.1-schnell",
       inputs: enhancedPrompt,
+      parameters: {
+        width: dimensions.width,
+        height: dimensions.height,
+      },
     });
 
     // Convert Blob to Base64
@@ -73,6 +87,91 @@ app.post("/generate-image", async (req, res) => {
     res.status(500).json({
       error: error.message || "Image generation failed",
     });
+  }
+});
+
+app.post("/remove-background", async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: "Image is required" });
+
+    const imageBuffer = Buffer.from(image, "base64");
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/briaai/RMBG-1.4",
+      {
+        headers: { Authorization: `Bearer ${process.env.HF_ACCESS_TOKEN}`, "Content-Type": "application/octet-stream" },
+        method: "POST",
+        body: imageBuffer,
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HF API error: ${response.statusText}`);
+    }
+
+    const resultBuffer = Buffer.from(await response.arrayBuffer());
+    const resultBase64 = resultBuffer.toString("base64");
+
+    res.json({ image: resultBase64 });
+  } catch (error) {
+    console.error("Remove background error:", error);
+    res.status(500).json({ error: error.message || "Failed to remove background" });
+  }
+});
+
+app.post("/upscale-image", async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: "Image is required" });
+
+    const imageBuffer = Buffer.from(image, "base64");
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/philz1337x/clarity-upscaler",
+      {
+        headers: { Authorization: `Bearer ${process.env.HF_ACCESS_TOKEN}`, "Content-Type": "application/octet-stream" },
+        method: "POST",
+        body: imageBuffer,
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HF API error: ${response.statusText}`);
+    }
+
+    const resultBuffer = Buffer.from(await response.arrayBuffer());
+    const resultBase64 = resultBuffer.toString("base64");
+
+    res.json({ image: resultBase64 });
+  } catch (error) {
+    console.error("Upscale image error:", error);
+    res.status(500).json({ error: error.message || "Failed to upscale image" });
+  }
+});
+
+app.post("/caption-image", async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: "Image is required" });
+
+    const imageBuffer = Buffer.from(image, "base64");
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large",
+      {
+        headers: { Authorization: `Bearer ${process.env.HF_ACCESS_TOKEN}`, "Content-Type": "application/octet-stream" },
+        method: "POST",
+        body: imageBuffer,
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HF API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    res.json({ caption: result[0]?.generated_text || "Could not generate caption" });
+  } catch (error) {
+    console.error("Caption image error:", error);
+    res.status(500).json({ error: error.message || "Failed to caption image" });
   }
 });
 

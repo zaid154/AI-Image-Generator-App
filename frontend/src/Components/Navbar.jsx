@@ -2,11 +2,14 @@ import React from "react";
 
 const Navbar = ({ activeTab, setActiveTab }) => {
   const navItems = [
-    { id: "generator", label: "Studio" },
-    { id: "gallery", label: "Explore Gallery" },
-    { id: "guide", label: "Prompt Guide" },
-    { id: "pricing", label: "Pricing" },
-    { id: "faq", label: "FAQ" },
+    { id: 'generator', label: 'Studio' },
+    { id: 'bg-remover', label: 'BG Remover' },
+    { id: 'upscaler', label: 'Upscaler' },
+    { id: 'captioner', label: 'Image to Prompt' },
+    { id: 'gallery', label: 'Gallery' },
+    { id: 'guide', label: 'Prompt Guide' },
+    { id: 'pricing', label: 'Pricing' },
+    { id: 'faq', label: 'FAQ' },
   ];
 
   const handleCreateClick = () => {
@@ -42,22 +45,26 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             {navItems.map((item) => {
               const isActive = activeTab === item.id;
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`text-sm font-medium transition-colors cursor-pointer relative h-full flex items-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                    isActive
-                      ? "text-white"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  {item.label}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 rounded-full" />
+                <React.Fragment key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`text-sm font-medium transition-colors cursor-pointer relative h-full flex items-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      isActive
+                        ? "text-white"
+                        : "text-zinc-400 hover:text-zinc-200"
+                    }`}
+                  >
+                    {item.label}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 rounded-full" />
+                    )}
+                  </button>
+                  {item.id === 'captioner' && (
+                    <div className="w-px h-4 bg-white/[0.08] mx-1" />
                   )}
-                </button>
+                </React.Fragment>
               );
             })}
           </nav>
