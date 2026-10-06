@@ -3,7 +3,8 @@ import {
   Download, Copy, Check, RefreshCw, X, AlertCircle, Sparkles, 
   Image as ImageIcon, Wand2, Dices, Scissors, Maximize2, Sliders, 
   Heart, Trash2, ChevronDown, ChevronUp, Lock, Unlock, Split, Palette,
-  Zap, Compass, Paintbrush, Share2, FolderPlus, Tag, Layers, Upload, Eye
+  Zap, Compass, Paintbrush, Share2, FolderPlus, Tag, Layers, Upload, Eye,
+  FileCode, Type, GitFork
 } from "lucide-react";
 import api from "../../api/client";
 import StudioEditorModal from "../Tools/StudioEditorModal";
@@ -11,6 +12,9 @@ import BeforeAfterSlider from "../Tools/BeforeAfterSlider";
 import PromptBuilderModal from "../Tools/PromptBuilderModal";
 import InpaintingCanvasModal from "../Tools/InpaintingCanvasModal";
 import SocialShareCardModal from "../Tools/SocialShareCardModal";
+import VectorConverterModal from "../Tools/VectorConverterModal";
+import DesignTemplatesModal from "../Tools/DesignTemplatesModal";
+import MetadataInspectorModal from "../Tools/MetadataInspectorModal";
 import { extractDominantColors } from "../../utils/colorExtractor";
 
 const samplePrompts = [
@@ -113,6 +117,9 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
   const [isPromptBuilderOpen, setIsPromptBuilderOpen] = useState(false);
   const [isInpaintOpen, setIsInpaintOpen] = useState(false);
   const [isShareCardOpen, setIsShareCardOpen] = useState(false);
+  const [isVectorModalOpen, setIsVectorModalOpen] = useState(false);
+  const [isDesignTemplatesOpen, setIsDesignTemplatesOpen] = useState(false);
+  const [inspectedItem, setInspectedItem] = useState(null);
   const [variationsList, setVariationsList] = useState(null);
   const [generatingVariations, setGeneratingVariations] = useState(false);
 
@@ -624,6 +631,18 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                   <span>Prompt Builder</span>
                 </button>
 
+                {/* Graphic Design & Typography Templates Launcher (Ideogram 2.0 Style) */}
+                <button
+                  type="button"
+                  onClick={() => setIsDesignTemplatesOpen(true)}
+                  disabled={isBusy}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Open Graphic Design & Typography Templates (Logos, T-Shirts, Posters)"
+                >
+                  <Type size={12} />
+                  <span>Typography Templates</span>
+                </button>
+
                 {/* AI Magic Expander */}
                 <button
                   type="button"
@@ -1099,6 +1118,19 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                       <img src={item.url} alt="History thumb" className="w-full h-full object-cover" />
                     </button>
 
+                    {/* Quick Metadata & Fork Inspector */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInspectedItem(item);
+                      }}
+                      className="absolute top-0.5 left-0.5 p-0.5 rounded-full bg-black/60 text-zinc-400 hover:text-blue-400 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity"
+                      title="Inspect generation parameters & Fork"
+                    >
+                      <GitFork size={10} />
+                    </button>
+
                     {/* Quick Heart Favorite Badge */}
                     <button
                       type="button"
@@ -1296,6 +1328,17 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                   <span className="hidden sm:inline">Upscale</span>
                 </button>
 
+                {/* Scalable Vector SVG Studio (Recraft.ai Style) */}
+                <button
+                  type="button"
+                  onClick={() => setIsVectorModalOpen(true)}
+                  title="Convert to Scalable Vector SVG (Recraft.ai style)"
+                  className="text-zinc-300 hover:text-white hover:bg-white/[0.08] px-2 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                >
+                  <FileCode size={13} className="text-emerald-400" />
+                  <span className="hidden sm:inline">Vector SVG</span>
+                </button>
+
                 {/* Social Showcase Card Generator */}
                 <button
                   type="button"
@@ -1450,6 +1493,48 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
         modelName={modelsList.find(m => m.id === selectedModel)?.name}
         seed={seed}
         aspectRatio={selectedAspectRatio}
+      />
+
+      {/* Scalable Vector SVG Studio Modal (Recraft.ai Style) */}
+      <VectorConverterModal
+        isOpen={isVectorModalOpen}
+        onClose={() => setIsVectorModalOpen(false)}
+        imageUrl={image_url}
+      />
+
+      {/* Graphic Design & Typography Studio Modal (Ideogram 2.0 Style) */}
+      <DesignTemplatesModal
+        isOpen={isDesignTemplatesOpen}
+        onClose={() => setIsDesignTemplatesOpen(false)}
+        onApplyTemplate={({ prompt, aspectRatio }) => {
+          setPromptText(prompt);
+          if (inputRef.current) inputRef.current.value = prompt;
+          if (aspectRatio) setSelectedAspectRatio(aspectRatio);
+          setSuccessNotice("Typography design template applied to studio!");
+          setTimeout(() => setSuccessNotice(""), 3500);
+        }}
+      />
+
+      {/* Deep Metadata Inspector & Parameter Forking Modal (Midjourney Style) */}
+      <MetadataInspectorModal
+        isOpen={!!inspectedItem}
+        onClose={() => setInspectedItem(null)}
+        item={inspectedItem}
+        onForkSettings={(itemToFork) => {
+          setImage_url(itemToFork.url);
+          setCurrentPrompt(itemToFork.prompt);
+          setPromptText(itemToFork.prompt);
+          if (inputRef.current) inputRef.current.value = itemToFork.prompt;
+          if (itemToFork.enhanced) setEnhancedPrompt(itemToFork.enhanced);
+          if (itemToFork.aspectRatio) setSelectedAspectRatio(itemToFork.aspectRatio);
+          if (itemToFork.model) setSelectedModel(itemToFork.model);
+          if (itemToFork.seed) {
+            setSeed(String(itemToFork.seed));
+            setLockSeed(true);
+          }
+          setSuccessNotice("Parameters forked & locked into studio canvas!");
+          setTimeout(() => setSuccessNotice(""), 3500);
+        }}
       />
 
     </div>

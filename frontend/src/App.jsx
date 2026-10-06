@@ -12,6 +12,7 @@ import LegalModal from "./Components/LegalModal";
 import BackgroundRemover from "./Components/Tools/BackgroundRemover";
 import ImageUpscaler from "./Components/Tools/ImageUpscaler";
 import ImageCaptioner from "./Components/Tools/ImageCaptioner";
+import Sketchpad from "./Components/Sketchpad/Sketchpad";
 
 function App() {
   const [selectedPrompt, setSelectedPrompt] = useState("");
@@ -60,6 +61,7 @@ function App() {
               />
             }
           />
+          <Route path="/sketchpad" element={<Sketchpad />} />
           <Route path="/bg-remover" element={<BackgroundRemover />} />
           <Route path="/upscaler" element={<ImageUpscaler />} />
           <Route

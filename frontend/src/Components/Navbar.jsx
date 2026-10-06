@@ -6,6 +6,7 @@ const Navbar = () => {
 
   const navItems = [
     { path: "/", label: "Studio" },
+    { path: "/sketchpad", label: "AI Sketchpad" },
     { path: "/bg-remover", label: "BG Remover" },
     { path: "/upscaler", label: "Upscaler" },
     { path: "/captioner", label: "Image to Prompt" },
