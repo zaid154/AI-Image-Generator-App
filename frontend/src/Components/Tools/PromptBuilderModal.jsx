@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { X, Sparkles, Copy, Check, RotateCcw, Plus, CheckCircle2, ArrowRight } from "lucide-react";
+import { 
+  X, Sparkles, Copy, Check, RotateCcw, Plus, CheckCircle2, ArrowRight,
+  Camera, Lightbulb, Palette, Smile, Frame, Sliders
+} from "lucide-react";
 
 const builderCategories = [
   {
     id: "camera",
     title: "Camera & Optics",
-    icon: "📸",
+    icon: Camera,
     tokens: [
       { id: "85mm", label: "85mm Portrait (f/1.4)", value: "85mm portrait lens, f/1.4 shallow depth of field, creamy bokeh" },
       { id: "24mm", label: "24mm Wide Angle", value: "24mm wide angle lens, expansive perspective, architectural sharpness" },
@@ -20,7 +23,7 @@ const builderCategories = [
   {
     id: "lighting",
     title: "Lighting Design",
-    icon: "💡",
+    icon: Lightbulb,
     tokens: [
       { id: "golden_hour", label: "Golden Hour Glow", value: "warm golden hour sunlight, low angle sunbeams, soft radiant rim lighting" },
       { id: "volumetric", label: "Volumetric God Rays", value: "volumetric fog with dramatic sun rays piercing through atmospheric mist" },
@@ -35,7 +38,7 @@ const builderCategories = [
   {
     id: "medium",
     title: "Art Medium & Engine",
-    icon: "🎨",
+    icon: Palette,
     tokens: [
       { id: "photo_8k", label: "Photorealistic 8K", value: "photorealistic 8k, Hasselblad medium format camera, ultra-fine micro details" },
       { id: "octane_3d", label: "Octane 3D Render", value: "hyperdetailed Octane 3D digital render, raytraced reflections, subsurface scattering" },
@@ -50,7 +53,7 @@ const builderCategories = [
   {
     id: "mood",
     title: "Mood & Atmosphere",
-    icon: "🎭",
+    icon: Smile,
     tokens: [
       { id: "ethereal", label: "Ethereal & Dreamy", value: "ethereal dreamy atmosphere, soft hazy glow, peaceful otherworldly sensation" },
       { id: "dark_noir", label: "Dark Noir Gothic", value: "dark gothic noir aesthetic, rain-slicked surfaces, heavy moody shadows, brooding tension" },
@@ -63,7 +66,7 @@ const builderCategories = [
   {
     id: "composition",
     title: "Framing & Composition",
-    icon: "📐",
+    icon: Frame,
     tokens: [
       { id: "thirds", label: "Rule of Thirds", value: "balanced rule of thirds framing, intentional off-center focal subject" },
       { id: "symmetry", label: "Perfect Symmetry", value: "flawless bilateral symmetry, centered architectural alignment, Wes Anderson framing" },
@@ -76,7 +79,7 @@ const builderCategories = [
   {
     id: "palette",
     title: "Color Harmonies",
-    icon: "🌈",
+    icon: Sliders,
     tokens: [
       { id: "cyber_palette", label: "Synthwave Neon", value: "color graded in electric cyan, deep magenta, and ultraviolet purple" },
       { id: "earthy", label: "Warm Terracotta", value: "earthy color harmony of warm terracotta, sage green, and raw ochre" },
@@ -203,12 +206,14 @@ const PromptBuilderModal = ({ isOpen, onClose, currentPrompt = "", onApplyPrompt
             </div>
 
             <div className="space-y-4">
-              {builderCategories.map((category) => (
-                <div key={category.id} className="p-4 rounded-xl bg-zinc-950/40 border border-white/[0.04] space-y-2.5">
-                  <div className="flex items-center gap-2 text-xs font-medium text-zinc-300">
-                    <span>{category.icon}</span>
-                    <span>{category.title}</span>
-                  </div>
+              {builderCategories.map((category) => {
+                const IconComponent = category.icon;
+                return (
+                  <div key={category.id} className="p-4 rounded-xl bg-zinc-950/40 border border-white/[0.04] space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-medium text-zinc-300">
+                      {IconComponent && <IconComponent size={14} className="text-blue-400 shrink-0" />}
+                      <span>{category.title}</span>
+                    </div>
 
                   <div className="flex flex-wrap gap-2">
                     {category.tokens.map((token) => {
@@ -235,7 +240,8 @@ const PromptBuilderModal = ({ isOpen, onClose, currentPrompt = "", onApplyPrompt
                     })}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
 

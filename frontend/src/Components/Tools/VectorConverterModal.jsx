@@ -212,7 +212,10 @@ const VectorConverterModal = ({ isOpen, onClose, imageUrl }) => {
           <div className="flex items-center gap-3 text-xs text-zinc-400 font-mono">
             {svgData && (
               <>
-                <span className="text-emerald-400">✓ Vectorized</span>
+                <span className="text-emerald-400 flex items-center gap-1">
+                  <Check size={12} />
+                  <span>Vectorized</span>
+                </span>
                 <span>·</span>
                 <span>{svgData.width}×{svgData.height} px</span>
                 <span>·</span>

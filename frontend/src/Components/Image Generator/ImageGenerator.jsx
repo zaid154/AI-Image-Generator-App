@@ -3,7 +3,7 @@ import {
   Download, Copy, Check, RefreshCw, X, AlertCircle, Sparkles, 
   Image as ImageIcon, Wand2, Dices, Scissors, Maximize2, Sliders, 
   Heart, Trash2, ChevronDown, ChevronUp, Lock, Unlock, Split, Palette,
-  Zap, Compass, Paintbrush, Share2, FolderPlus, Tag, Layers, Upload, Eye,
+  Zap, Compass, Paintbrush, Share2, Folder, FolderPlus, Tag, Layers, Upload, Eye,
   FileCode, Type, GitFork
 } from "lucide-react";
 import api from "../../api/client";
@@ -339,7 +339,7 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
       const expanded = await api.expandPrompt(raw);
       setPromptText(expanded);
       if (inputRef.current) inputRef.current.value = expanded;
-      setSuccessNotice("✨ Prompt enhanced with creative art direction!");
+      setSuccessNotice("Prompt enhanced with creative art direction.");
       setTimeout(() => setSuccessNotice(""), 3500);
     } catch (err) {
       setErrorMessage(err.message || "Failed to expand prompt");
@@ -424,7 +424,7 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
     const colorInstruction = `, harmonized color palette featuring ${hexTokens}`;
     setPromptText((prev) => prev.trim() + colorInstruction);
     if (inputRef.current) inputRef.current.value = promptText + colorInstruction;
-    setSuccessNotice("🎨 Color palette harmonized into your prompt description!");
+    setSuccessNotice("Color palette harmonized into your prompt description.");
     setTimeout(() => setSuccessNotice(""), 3500);
   };
 
@@ -1069,22 +1069,24 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                 <button
                   type="button"
                   onClick={() => setActiveCollectionFilter("favorites")}
-                  className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer ${
+                  className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                     activeCollectionFilter === "favorites" ? "bg-white/[0.1] text-white font-medium" : "text-zinc-500 hover:text-zinc-300"
                   }`}
                 >
-                  ❤️ Favs ({history.filter(h => h.isFavorite).length})
+                  <Heart size={11} className={activeCollectionFilter === "favorites" ? "text-red-400 fill-red-400" : "text-zinc-400"} />
+                  <span>Favorites ({history.filter(h => h.isFavorite).length})</span>
                 </button>
                 {collections.map((coll) => (
                   <button
                     key={coll}
                     type="button"
                     onClick={() => setActiveCollectionFilter(coll)}
-                    className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer ${
+                    className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                       activeCollectionFilter === coll ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
-                    📁 {coll} ({history.filter(h => h.collection === coll).length})
+                    <Folder size={11} className={activeCollectionFilter === coll ? "text-blue-400" : "text-zinc-400"} />
+                    <span>{coll} ({history.filter(h => h.collection === coll).length})</span>
                   </button>
                 ))}
               </div>
@@ -1274,7 +1276,10 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
             {/* Inference Badge at Top-Left */}
             {metaInfo && !isBusy && image_url !== "/" && (
               <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md border border-white/[0.08] text-[10px] font-mono text-zinc-300 z-10 pointer-events-none">
-                <span>⚡ {(metaInfo.durationMs / 1000).toFixed(1)}s</span>
+                <span className="flex items-center gap-1">
+                  <Zap size={11} className="text-zinc-400" />
+                  <span>{(metaInfo.durationMs / 1000).toFixed(1)}s</span>
+                </span>
                 <span>·</span>
                 <span>Seed: {metaInfo.seed}</span>
               </div>

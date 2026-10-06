@@ -236,7 +236,7 @@ const ImageCaptioner = ({ onSelectPrompt }) => {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-medium transition-colors cursor-pointer border border-blue-500/20 disabled:opacity-50"
                     >
                       <Sparkles size={13} className={expanding ? "animate-spin" : ""} />
-                      <span>{expanding ? "Expanding..." : "✨ AI Expand Prompt"}</span>
+                      <span>{expanding ? "Expanding..." : "AI Expand Prompt"}</span>
                     </button>
 
                     <button
@@ -245,7 +245,7 @@ const ImageCaptioner = ({ onSelectPrompt }) => {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs font-medium transition-colors cursor-pointer border border-purple-500/20 disabled:opacity-50"
                     >
                       <Dices size={13} className={varying ? "animate-spin" : ""} />
-                      <span>{varying ? "Generating..." : "🪄 3 Variations"}</span>
+                      <span>{varying ? "Generating..." : "Generate Variations"}</span>
                     </button>
 
                     <button
@@ -253,7 +253,8 @@ const ImageCaptioner = ({ onSelectPrompt }) => {
                       className="flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors cursor-pointer shadow-sm ml-auto"
                     >
                       <Wand2 size={13} />
-                      <span>Use in Studio →</span>
+                      <span>Use in Studio</span>
+                      <ArrowRight size={13} />
                     </button>
                   </div>
                 </div>
