@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Copy, Check, ArrowRight } from "lucide-react";
 
 import img1 from "./Assets/claraundben-ai-generated-8622236_1920.jpg";
@@ -55,9 +56,10 @@ const galleryItems = [
 
 const categories = ["All", "Portraits", "Fantasy", "Landscapes"];
 
-const Gallery = ({ onSelectPrompt, setActiveTab }) => {
+const Gallery = ({ onSelectPrompt }) => {
   const [activeCategory, setActiveCategory] = useState("All");
   const [copiedId, setCopiedId] = useState(null);
+  const navigate = useNavigate();
 
   const filteredItems = activeCategory === "All" 
     ? galleryItems 
@@ -71,7 +73,7 @@ const Gallery = ({ onSelectPrompt, setActiveTab }) => {
 
   const handleRemix = (prompt) => {
     if (onSelectPrompt) onSelectPrompt(prompt);
-    if (setActiveTab) setActiveTab("generator");
+    navigate("/");
   };
 
   return (

@@ -28,8 +28,11 @@ const faqs = [
   }
 ];
 
-const FAQ = ({ setActiveTab }) => {
+import { useNavigate } from "react-router-dom";
+
+const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(0);
+  const navigate = useNavigate();
 
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -89,7 +92,7 @@ const FAQ = ({ setActiveTab }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg bg-zinc-900/30 border border-white/[0.06]">
         <span className="text-xs sm:text-sm text-zinc-300">Looking for tips to improve your generations?</span>
         <button
-          onClick={() => setActiveTab("guide")}
+          onClick={() => navigate("/guide")}
           className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium transition-colors cursor-pointer self-start sm:self-auto"
         >
           Explore Prompt Engineering Guide →

@@ -1,24 +1,28 @@
 import React from "react";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 
-const Navbar = ({ activeTab, setActiveTab }) => {
+const Navbar = () => {
+  const navigate = useNavigate();
+
   const navItems = [
-    { id: 'generator', label: 'Studio' },
-    { id: 'bg-remover', label: 'BG Remover' },
-    { id: 'upscaler', label: 'Upscaler' },
-    { id: 'captioner', label: 'Image to Prompt' },
-    { id: 'gallery', label: 'Gallery' },
-    { id: 'guide', label: 'Prompt Guide' },
-    { id: 'pricing', label: 'Pricing' },
-    { id: 'faq', label: 'FAQ' },
+    { path: "/", label: "Studio" },
+    { path: "/bg-remover", label: "BG Remover" },
+    { path: "/upscaler", label: "Upscaler" },
+    { path: "/captioner", label: "Image to Prompt" },
+    { path: "/gallery", label: "Gallery" },
+    { path: "/guide", label: "Prompt Guide" },
+    { path: "/pricing", label: "Pricing" },
+    { path: "/faq", label: "FAQ" },
   ];
 
   const handleCreateClick = () => {
-    setActiveTab("generator");
-    // If already on generator, smoothly scroll or focus textarea
-    const textarea = document.querySelector("textarea");
-    if (textarea) {
-      textarea.focus();
-    }
+    navigate("/");
+    setTimeout(() => {
+      const textarea = document.querySelector("textarea");
+      if (textarea) {
+        textarea.focus();
+      }
+    }, 100);
   };
 
   return (
@@ -27,9 +31,8 @@ const Navbar = ({ activeTab, setActiveTab }) => {
         <div className="flex items-center justify-between h-14">
           
           {/* Brand Logo */}
-          <button 
-            type="button"
-            onClick={() => setActiveTab("generator")}
+          <Link 
+            to="/"
             className="flex items-center gap-2 cursor-pointer select-none text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
           >
             <span className="font-semibold text-base text-white tracking-tight">
@@ -38,35 +41,39 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             <span className="text-[10px] font-mono uppercase text-zinc-400 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06] hidden sm:inline-block">
               Studio
             </span>
-          </button>
+          </Link>
 
           {/* Navigation Links (Desktop) */}
           <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-6 h-full">
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id;
-              return (
-                <React.Fragment key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab(item.id)}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`text-sm font-medium transition-colors cursor-pointer relative h-full flex items-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            {navItems.map((item) => (
+              <React.Fragment key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={item.path === "/"}
+                  className={({ isActive }) =>
+                    `text-sm font-medium transition-colors cursor-pointer relative h-full flex items-center px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                       isActive
                         ? "text-white"
                         : "text-zinc-400 hover:text-zinc-200"
-                    }`}
-                  >
-                    {item.label}
-                    {isActive && (
-                      <span className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 rounded-full" />
-                    )}
-                  </button>
-                  {item.id === 'captioner' && (
-                    <div className="w-px h-4 bg-white/[0.08] mx-1" />
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {item.label}
+                      {isActive && (
+                        <span className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 rounded-full" />
+                      )}
+                    </>
                   )}
-                </React.Fragment>
-              );
-            })}
+                </NavLink>
+
+                {/* Visual Separator between AI Tools & Info pages */}
+                {item.path === "/captioner" && (
+                  <div className="w-px h-4 bg-white/[0.08] mx-1 self-center" />
+                )}
+              </React.Fragment>
+            ))}
           </nav>
 
           {/* Right Action / Engine Status */}
@@ -88,22 +95,20 @@ const Navbar = ({ activeTab, setActiveTab }) => {
 
         {/* Mobile Navigation bar */}
         <nav aria-label="Mobile Navigation" className="flex md:hidden items-center justify-between py-2.5 border-t border-white/[0.06] overflow-x-auto gap-4 scrollbar-none">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveTab(item.id)}
-                aria-current={isActive ? "page" : undefined}
-                className={`text-xs font-medium whitespace-nowrap transition-colors py-1 px-1.5 rounded ${
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === "/"}
+              className={({ isActive }) =>
+                `text-xs font-medium whitespace-nowrap transition-colors py-1 px-1.5 rounded ${
                   isActive ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
       </div>
     </header>

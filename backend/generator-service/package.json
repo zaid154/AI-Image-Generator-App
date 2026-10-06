@@ -1,0 +1,17 @@
+{
+  "name": "generator-service",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FLUX.1 Text-to-Image Generation Microservice",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@huggingface/inference": "^4.13.30",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1"
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import "./index.css";
 import Navbar from "./Components/Navbar";
 import ImageGenerator from "./Components/Image Generator/ImageGenerator";
@@ -8,18 +9,19 @@ import Pricing from "./Components/Pricing";
 import FAQ from "./Components/FAQ";
 import Footer from "./Components/Footer";
 import LegalModal from "./Components/LegalModal";
-import BackgroundRemover from './Components/Tools/BackgroundRemover';
-import ImageUpscaler from './Components/Tools/ImageUpscaler';
-import ImageCaptioner from './Components/Tools/ImageCaptioner';
+import BackgroundRemover from "./Components/Tools/BackgroundRemover";
+import ImageUpscaler from "./Components/Tools/ImageUpscaler";
+import ImageCaptioner from "./Components/Tools/ImageCaptioner";
 
 function App() {
-  const [activeTab, setActiveTab] = useState("generator");
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState("privacy");
+  const navigate = useNavigate();
 
   const handleSelectPrompt = (prompt) => {
     setSelectedPrompt(prompt);
+    navigate("/");
   };
 
   const handleClearInitialPrompt = () => {
@@ -34,52 +36,49 @@ function App() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-zinc-100 flex flex-col justify-between antialiased selection:bg-blue-500/30 selection:text-white">
 
-      {/* Global Header */}
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Global Header with React Router Navigation */}
+      <Navbar />
 
-      {/* Dynamic Main Stage */}
+      {/* Dynamic Main Stage with Real URL Routes */}
       <main className="flex-grow">
-        {/*
-          ImageGenerator is always mounted but hidden via CSS when not active.
-          This preserves all state (history, current image, prompt) across tab switches.
-        */}
-        <div style={{ display: activeTab === "generator" ? "block" : "none" }}>
-          <ImageGenerator
-            initialPrompt={selectedPrompt}
-            onClearInitialPrompt={handleClearInitialPrompt}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ImageGenerator
+                initialPrompt={selectedPrompt}
+                onClearInitialPrompt={handleClearInitialPrompt}
+              />
+            }
           />
-        </div>
-
-        {activeTab === "gallery" && (
-          <Gallery
-            onSelectPrompt={handleSelectPrompt}
-            setActiveTab={setActiveTab}
+          <Route
+            path="/studio"
+            element={
+              <ImageGenerator
+                initialPrompt={selectedPrompt}
+                onClearInitialPrompt={handleClearInitialPrompt}
+              />
+            }
           />
-        )}
-
-        {activeTab === 'bg-remover' && <BackgroundRemover />}
-        {activeTab === 'upscaler' && <ImageUpscaler />}
-        {activeTab === 'captioner' && (
-          <ImageCaptioner
-            onSelectPrompt={handleSelectPrompt}
-            setActiveTab={setActiveTab}
+          <Route path="/bg-remover" element={<BackgroundRemover />} />
+          <Route path="/upscaler" element={<ImageUpscaler />} />
+          <Route
+            path="/captioner"
+            element={
+              <ImageCaptioner onSelectPrompt={handleSelectPrompt} />
+            }
           />
-        )}
-
-        {activeTab === "guide" && (
-          <PromptGuide
-            onSelectPrompt={handleSelectPrompt}
-            setActiveTab={setActiveTab}
+          <Route
+            path="/gallery"
+            element={<Gallery onSelectPrompt={handleSelectPrompt} />}
           />
-        )}
-
-        {activeTab === "pricing" && (
-          <Pricing setActiveTab={setActiveTab} />
-        )}
-
-        {activeTab === "faq" && (
-          <FAQ setActiveTab={setActiveTab} />
-        )}
+          <Route
+            path="/guide"
+            element={<PromptGuide onSelectPrompt={handleSelectPrompt} />}
+          />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/faq" element={<FAQ />} />
+        </Routes>
       </main>
 
       {/* Global Footer */}

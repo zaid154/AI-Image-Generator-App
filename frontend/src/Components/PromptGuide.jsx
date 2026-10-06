@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Copy, Check, ArrowRight } from "lucide-react";
 
 const formulaExamples = [
@@ -79,8 +80,9 @@ const sections = [
   }
 ];
 
-const PromptGuide = ({ onSelectPrompt, setActiveTab }) => {
+const PromptGuide = ({ onSelectPrompt }) => {
   const [copiedTag, setCopiedTag] = useState(null);
+  const navigate = useNavigate();
 
   const handleCopyTag = (tag) => {
     navigator.clipboard.writeText(tag);
@@ -90,7 +92,7 @@ const PromptGuide = ({ onSelectPrompt, setActiveTab }) => {
 
   const handleLoadFormulaPrompt = (prompt) => {
     if (onSelectPrompt) onSelectPrompt(prompt);
-    if (setActiveTab) setActiveTab("generator");
+    navigate("/");
   };
 
   return (
@@ -176,7 +178,7 @@ const PromptGuide = ({ onSelectPrompt, setActiveTab }) => {
       <div className="flex items-center gap-3 p-4 rounded-lg bg-zinc-900/30 border border-white/[0.06]">
         <span className="text-sm text-zinc-300">Ready to put these prompt techniques to work?</span>
         <button
-          onClick={() => setActiveTab("generator")}
+          onClick={() => navigate("/")}
           className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors cursor-pointer flex items-center gap-1 ml-auto"
         >
           <span>Open Image Studio</span>

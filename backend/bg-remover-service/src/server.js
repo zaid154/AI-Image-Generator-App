@@ -1,0 +1,54 @@
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "50mb" }));
+
+app.get("/health", (req, res) => {
+  res.json({ service: "bg-remover-service", status: "online", model: "briaai/RMBG-1.4" });
+});
+
+app.post("/remove-bg", async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: "Image base64 is required" });
+    }
+
+    const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, "");
+    const imageBuffer = Buffer.from(cleanBase64, "base64");
+
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/briaai/RMBG-1.4",
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_ACCESS_TOKEN}`,
+          "Content-Type": "application/octet-stream",
+        },
+        method: "POST",
+        body: imageBuffer,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HF RMBG API error: ${response.statusText}`);
+    }
+
+    const resultBuffer = Buffer.from(await response.arrayBuffer());
+    const resultBase64 = resultBuffer.toString("base64");
+
+    res.json({ image: resultBase64 });
+  } catch (error) {
+    console.error("BG Remover Service Error:", error);
+    res.status(500).json({ error: error.message || "Failed to remove background" });
+  }
+});
+
+const PORT = process.env.PORT || 5003;
+app.listen(PORT, () => {
+  console.log(`✂️ [BG Remover Service] Running on http://localhost:${PORT}`);
+});

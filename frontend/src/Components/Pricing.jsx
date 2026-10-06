@@ -57,12 +57,15 @@ const plans = [
   }
 ];
 
-const Pricing = ({ setActiveTab }) => {
+import { useNavigate } from "react-router-dom";
+
+const Pricing = () => {
   const [modalMessage, setModalMessage] = useState(null);
+  const navigate = useNavigate();
 
   const handleAction = (plan) => {
     if (plan.id === "free") {
-      if (setActiveTab) setActiveTab("generator");
+      navigate("/");
     } else if (plan.id === "pro") {
       setModalMessage({
         title: "Creator Pro — Waitlist Open",
