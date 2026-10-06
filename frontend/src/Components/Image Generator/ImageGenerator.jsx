@@ -3,11 +3,15 @@ import {
   Download, Copy, Check, RefreshCw, X, AlertCircle, Sparkles, 
   Image as ImageIcon, Wand2, Dices, Scissors, Maximize2, Sliders, 
   Heart, Trash2, ChevronDown, ChevronUp, Lock, Unlock, Split, Palette,
-  Zap, Compass
+  Zap, Compass, Paintbrush, Share2, FolderPlus, Tag, Layers, Upload, Eye
 } from "lucide-react";
 import api from "../../api/client";
 import StudioEditorModal from "../Tools/StudioEditorModal";
 import BeforeAfterSlider from "../Tools/BeforeAfterSlider";
+import PromptBuilderModal from "../Tools/PromptBuilderModal";
+import InpaintingCanvasModal from "../Tools/InpaintingCanvasModal";
+import SocialShareCardModal from "../Tools/SocialShareCardModal";
+import { extractDominantColors } from "../../utils/colorExtractor";
 
 const samplePrompts = [
   "Architectural interior of a minimalist concrete pavilion with indoor reflective pool, morning sunlight beam",
@@ -52,9 +56,10 @@ const modelsList = [
   { id: "anime", name: "Animagine XL 3.1", badge: "Anime / Ghibli", desc: "Fine-tuned for Japanese animation art" },
 ];
 
-const STORAGE_VAULT_KEY = "vivid_ai_generation_vault_v2";
+const STORAGE_VAULT_KEY = "vivid_ai_generation_vault_v3";
 const STORAGE_ACTIVE_IMAGE_KEY = "vivid_ai_active_image";
 const STORAGE_ACTIVE_PROMPT_KEY = "vivid_ai_active_prompt";
+const STORAGE_COLLECTIONS_KEY = "vivid_ai_collections_v1";
 
 const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
   // Canvas & Output State
@@ -82,6 +87,20 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
   const [selectedModel, setSelectedModel] = useState("flux-schnell");
 
+  // Multi-Grid Mode (Midjourney 1x, 2x, 4x Grid)
+  const [gridMode, setGridMode] = useState(1); // 1, 2, 4
+  const [batchImages, setBatchImages] = useState([]);
+
+  // Image-to-Image (img2img) Reference State
+  const [showImg2Img, setShowImg2Img] = useState(false);
+  const [referenceImage, setReferenceImage] = useState(null);
+  const [referenceStrength, setReferenceStrength] = useState(0.5); // 0.1 to 0.9
+  const refFileInputRef = useRef(null);
+
+  // Color Palette Harmony & Extractor
+  const [dominantColors, setDominantColors] = useState([]);
+  const [copiedHex, setCopiedHex] = useState(null);
+
   // Advanced Parameters
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [seed, setSeed] = useState("");
@@ -89,17 +108,26 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
   const [guidanceScale, setGuidanceScale] = useState(7.5);
   const [inferenceSteps, setInferenceSteps] = useState(4);
 
-  // Modals & Variations State
+  // Modals State
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isPromptBuilderOpen, setIsPromptBuilderOpen] = useState(false);
+  const [isInpaintOpen, setIsInpaintOpen] = useState(false);
+  const [isShareCardOpen, setIsShareCardOpen] = useState(false);
   const [variationsList, setVariationsList] = useState(null);
   const [generatingVariations, setGeneratingVariations] = useState(false);
-  const [historyFilter, setHistoryFilter] = useState("all"); // all, favorites
 
-  // Clipboard & UI Alerts
-  const [copied, setCopied] = useState(false);
-  const [copiedImage, setCopiedImage] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successNotice, setSuccessNotice] = useState("");
+  // Collections & Vault Management
+  const [collections, setCollections] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_COLLECTIONS_KEY);
+      return saved ? JSON.parse(saved) : ["Wallpapers", "Characters", "Mockups"];
+    } catch {
+      return ["Wallpapers", "Characters", "Mockups"];
+    }
+  });
+  const [activeCollectionFilter, setActiveCollectionFilter] = useState("all"); // "all", "favorites", or collection name
+  const [showAddCollection, setShowAddCollection] = useState(false);
+  const [newCollectionInput, setNewCollectionInput] = useState("");
 
   // Persistent History Vault
   const [history, setHistory] = useState(() => {
@@ -111,6 +139,12 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
     }
   });
 
+  // Clipboard & UI Alerts
+  const [copied, setCopied] = useState(false);
+  const [copiedImage, setCopiedImage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successNotice, setSuccessNotice] = useState("");
+
   const inputRef = useRef(null);
 
   // Save history vault changes
@@ -121,6 +155,26 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
       console.warn("Storage quota exceeded", e);
     }
   }, [history]);
+
+  // Save collections changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_COLLECTIONS_KEY, JSON.stringify(collections));
+    } catch (e) {
+      console.warn("Storage quota exceeded", e);
+    }
+  }, [collections]);
+
+  // Auto-extract dominant colors from active canvas image
+  useEffect(() => {
+    if (image_url && image_url !== "/") {
+      extractDominantColors(image_url).then((colors) => {
+        setDominantColors(colors);
+      });
+    } else {
+      setDominantColors([]);
+    }
+  }, [image_url]);
 
   // Sync initialPrompt prop
   useEffect(() => {
@@ -156,7 +210,24 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   });
 
-  // CORE GENERATE METHOD
+  // Handle Reference Image Upload (img2img)
+  const handleRefImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Please select a valid image file for reference.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setReferenceImage(event.target.result);
+      setSuccessNotice("Reference image loaded for style guidance!");
+      setTimeout(() => setSuccessNotice(""), 3000);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // CORE GENERATE METHOD (Supports 1x, 2x, 4x Multi-Grid)
   const generateImage = async (overridePrompt) => {
     const rawInput = (overridePrompt || promptText || inputRef.current?.value || "").trim();
 
@@ -176,7 +247,11 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
 
     try {
       setLoading(true);
-      setLoadingPhase("Analyzing prompt with Qwen 72B...");
+      setLoadingPhase(
+        gridMode > 1
+          ? `Synthesizing ${gridMode}x Multi-Grid Variations with ${modelsList.find(m => m.id === selectedModel)?.name}...`
+          : "Analyzing prompt with Qwen 72B..."
+      );
       setCurrentPrompt(rawInput);
 
       const phaseTimer = setTimeout(() => {
@@ -194,12 +269,21 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
         seed: generatedSeed,
         guidanceScale,
         numInferenceSteps: inferenceSteps,
+        batchCount: gridMode,
+        referenceImage: referenceImage || undefined,
+        referenceStrength,
       });
 
       clearTimeout(phaseTimer);
 
-      const newImageUrl = `data:image/png;base64,${data.image}`;
-      setImage_url(newImageUrl);
+      const imagesArray = data.images && data.images.length > 0
+        ? data.images.map((img) => (img.startsWith("data:") ? img : `data:image/png;base64,${img}`))
+        : [`data:image/png;base64,${data.image}`];
+
+      setBatchImages(imagesArray);
+      const primaryUrl = imagesArray[0];
+      setImage_url(primaryUrl);
+
       if (data.enhancedPrompt) {
         setEnhancedPrompt(data.enhancedPrompt);
       }
@@ -211,20 +295,21 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
         durationMs: data.durationMs || 1800,
       });
 
-      // Add to persistent vault
-      const newEntry = {
-        id: Date.now(),
-        url: newImageUrl,
+      // Add each generated image to persistent vault
+      const newEntries = imagesArray.map((url, idx) => ({
+        id: Date.now() + idx,
+        url,
         prompt: rawInput,
         enhanced: data.enhancedPrompt,
         aspectRatio: selectedAspectRatio,
         model: selectedModel,
-        seed: generatedSeed,
+        seed: Number(generatedSeed) + idx * 1337,
         isFavorite: false,
+        collection: "All",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
+      }));
 
-      setHistory((prev) => [newEntry, ...prev.slice(0, 39)]);
+      setHistory((prev) => [...newEntries, ...prev.slice(0, 45)]);
     } catch (error) {
       console.error(error);
       setErrorMessage(error.message || "Failed to generate image. Please try again.");
@@ -325,6 +410,24 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
     }
   };
 
+  // Inject Dominant Color Palette into Prompt
+  const handleInjectColorsIntoPrompt = () => {
+    if (dominantColors.length === 0) return;
+    const hexTokens = dominantColors.map(c => c.hex).join(", ");
+    const colorInstruction = `, harmonized color palette featuring ${hexTokens}`;
+    setPromptText((prev) => prev.trim() + colorInstruction);
+    if (inputRef.current) inputRef.current.value = promptText + colorInstruction;
+    setSuccessNotice("🎨 Color palette harmonized into your prompt description!");
+    setTimeout(() => setSuccessNotice(""), 3500);
+  };
+
+  // Copy Color Hex
+  const handleCopyHex = (hex) => {
+    navigator.clipboard.writeText(hex);
+    setCopiedHex(hex);
+    setTimeout(() => setCopiedHex(null), 1500);
+  };
+
   // Toggle Favorite in History
   const toggleFavorite = (id, e) => {
     e.stopPropagation();
@@ -339,11 +442,30 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
     setHistory((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // Add Item to Named Collection
+  const assignItemToCollection = (itemId, collectionName, e) => {
+    e.stopPropagation();
+    setHistory((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, collection: collectionName } : item))
+    );
+    setSuccessNotice(`Saved to ${collectionName} collection!`);
+    setTimeout(() => setSuccessNotice(""), 2500);
+  };
+
+  // Create New Collection
+  const handleCreateCollection = () => {
+    const trimmed = newCollectionInput.trim();
+    if (!trimmed || collections.includes(trimmed)) return;
+    setCollections((prev) => [...prev, trimmed]);
+    setNewCollectionInput("");
+    setShowAddCollection(false);
+    setActiveCollectionFilter(trimmed);
+  };
+
   // Download Handler (supports PNG, WebP, JPG)
   const handleDownload = (format = "png") => {
     if (image_url === "/") return;
     
-    // If original format is PNG, we can download directly
     if (format === "png") {
       const link = document.createElement("a");
       link.href = image_url;
@@ -354,7 +476,6 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
       return;
     }
 
-    // Convert via canvas for WebP/JPG
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = image_url;
@@ -410,7 +531,13 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
   };
 
   const isBusy = loading || toolLoading || expandingPrompt || generatingVariations;
-  const filteredHistory = historyFilter === "favorites" ? history.filter((h) => h.isFavorite) : history;
+  
+  // Filter history by Active Collection / Favorites
+  const filteredHistory = history.filter((item) => {
+    if (activeCollectionFilter === "favorites") return item.isFavorite;
+    if (activeCollectionFilter === "all") return true;
+    return item.collection === activeCollectionFilter;
+  });
 
   return (
     <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-6 min-h-[calc(100vh-56px)] flex items-center justify-center">
@@ -485,6 +612,18 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
               </label>
               
               <div className="flex items-center gap-2">
+                {/* Visual Prompt Builder Modal Launcher */}
+                <button
+                  type="button"
+                  onClick={() => setIsPromptBuilderOpen(true)}
+                  disabled={isBusy}
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="Open Visual Prompt Builder Matrix (Optics, Lighting, Mood chips)"
+                >
+                  <Sparkles size={12} />
+                  <span>Prompt Builder</span>
+                </button>
+
                 {/* AI Magic Expander */}
                 <button
                   type="button"
@@ -579,6 +718,111 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                     <span className="text-[10px] text-zinc-400 leading-tight line-clamp-2">{v.prompt}</span>
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Multi-Grid Generation & img2img Control Bar */}
+          <div className="grid grid-cols-2 gap-2">
+            
+            {/* Midjourney 1x, 2x, 4x Multi-Grid Variations Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] text-zinc-400 uppercase tracking-wider font-medium flex items-center gap-1">
+                <Layers size={12} className="text-blue-400" />
+                <span>Multi-Grid Batch</span>
+              </label>
+              <div className="flex rounded-lg bg-zinc-950/70 border border-white/[0.06] p-0.5">
+                {[1, 2, 4].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setGridMode(num)}
+                    disabled={isBusy}
+                    className={`flex-1 py-1 text-xs rounded transition-colors cursor-pointer text-center font-mono ${
+                      gridMode === num ? "bg-white/[0.1] text-white font-semibold" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    {num}x {num === 1 ? "Single" : num === 2 ? "Split" : "Grid"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Reference Image / img2img Toggle */}
+            <div className="space-y-1">
+              <label className="text-[11px] text-zinc-400 uppercase tracking-wider font-medium flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Upload size={12} className="text-purple-400" />
+                  <span>Image-to-Image</span>
+                </span>
+                {referenceImage && (
+                  <button
+                    type="button"
+                    onClick={() => setReferenceImage(null)}
+                    className="text-[10px] text-red-400 hover:text-red-300 cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowImg2Img(!showImg2Img)}
+                className={`w-full py-1.5 px-2.5 rounded-lg border text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                  referenceImage
+                    ? "bg-purple-950/30 border-purple-500/40 text-purple-300"
+                    : showImg2Img
+                    ? "bg-white/[0.08] border-white/[0.12] text-white"
+                    : "bg-zinc-950/70 border-white/[0.06] text-zinc-400 hover:text-white"
+                }`}
+              >
+                <span className="truncate">{referenceImage ? "Reference Active" : "Add Reference..."}</span>
+                {showImg2Img ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Reference Image Drawer (When toggled) */}
+          {showImg2Img && (
+            <div className="p-3 rounded-lg bg-zinc-950/80 border border-purple-500/30 space-y-3 animate-in fade-in duration-150">
+              <input
+                type="file"
+                ref={refFileInputRef}
+                onChange={handleRefImageChange}
+                accept="image/*"
+                className="hidden"
+              />
+              <div className="flex items-center gap-3">
+                {referenceImage ? (
+                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-purple-500/40 shrink-0">
+                    <img src={referenceImage} alt="Ref preview" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => refFileInputRef.current?.click()}
+                    className="w-14 h-14 rounded-lg border-2 border-dashed border-white/[0.1] hover:border-purple-500/50 flex flex-col items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer shrink-0"
+                  >
+                    <Upload size={16} />
+                  </button>
+                )}
+
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Influence Strength:</span>
+                    <span className="text-purple-400 font-mono">{Math.round(referenceStrength * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="0.9"
+                    step="0.05"
+                    value={referenceStrength}
+                    onChange={(e) => setReferenceStrength(Number(e.target.value))}
+                    className="w-full accent-purple-500 cursor-pointer"
+                  />
+                  <p className="text-[10px] text-zinc-500">Guides AI composition based on your input photo</p>
+                </div>
               </div>
             </div>
           )}
@@ -711,7 +955,9 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                 <span>{loadingPhase || "Processing with AI Engine..."}</span>
               </>
             ) : (
-              <span>Generate Masterpiece (Ctrl+Enter)</span>
+              <span>
+                Generate {gridMode > 1 ? `${gridMode}x Variations` : "Masterpiece"} (Ctrl+Enter)
+              </span>
             )}
           </button>
 
@@ -741,40 +987,90 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
             </div>
           </div>
 
-          {/* Persistent Vault / History */}
+          {/* Project Workspaces & Custom Collections Vault */}
           {history.length > 0 && (
             <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.06]">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-400 font-medium">Session Vault</span>
-                  <div className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded border border-white/[0.06] text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => setHistoryFilter("all")}
-                      className={`px-1.5 py-0.5 rounded cursor-pointer ${historyFilter === "all" ? "bg-white/[0.1] text-white" : "text-zinc-500"}`}
-                    >
-                      All ({history.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHistoryFilter("favorites")}
-                      className={`px-1.5 py-0.5 rounded cursor-pointer ${historyFilter === "favorites" ? "bg-white/[0.1] text-white" : "text-zinc-500"}`}
-                    >
-                      ❤️ Favs ({history.filter(h => h.isFavorite).length})
-                    </button>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-zinc-400 font-medium">Project Vault</span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setHistory([])}
-                  className="text-[10px] text-zinc-500 hover:text-red-400 cursor-pointer"
-                  title="Clear history"
-                >
-                  Clear All
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCollection(!showAddCollection)}
+                    className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <FolderPlus size={11} />
+                    <span>New Folder</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setHistory([])}
+                    className="text-[10px] text-zinc-500 hover:text-red-400 cursor-pointer"
+                    title="Clear history"
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
+              {/* Add Collection Input Bar */}
+              {showAddCollection && (
+                <div className="flex gap-1.5 p-2 rounded-lg bg-zinc-950 border border-white/[0.08] animate-in fade-in duration-150">
+                  <input
+                    type="text"
+                    value={newCollectionInput}
+                    onChange={(e) => setNewCollectionInput(e.target.value)}
+                    placeholder="Folder name (e.g. YouTube Thumbnails)"
+                    className="flex-1 px-2 py-1 bg-black text-xs rounded text-white focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateCollection}
+                    className="px-2.5 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white text-xs cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+
+              {/* Collections Filter Tabs */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[10px] scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setActiveCollectionFilter("all")}
+                  className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer ${
+                    activeCollectionFilter === "all" ? "bg-white/[0.1] text-white font-medium" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  All ({history.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveCollectionFilter("favorites")}
+                  className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer ${
+                    activeCollectionFilter === "favorites" ? "bg-white/[0.1] text-white font-medium" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  ❤️ Favs ({history.filter(h => h.isFavorite).length})
+                </button>
+                {collections.map((coll) => (
+                  <button
+                    key={coll}
+                    type="button"
+                    onClick={() => setActiveCollectionFilter(coll)}
+                    className={`px-2 py-1 rounded whitespace-nowrap cursor-pointer ${
+                      activeCollectionFilter === coll ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    📁 {coll} ({history.filter(h => h.collection === coll).length})
+                  </button>
+                ))}
+              </div>
+
+              {/* Vault Thumbnails Carousel */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {filteredHistory.map((item) => (
                   <div
@@ -814,6 +1110,20 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                       <Heart size={10} fill={item.isFavorite ? "currentColor" : "none"} />
                     </button>
 
+                    {/* Quick Folder Assign Trigger */}
+                    {collections.length > 0 && (
+                      <div className="absolute bottom-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <select
+                          value={item.collection || "All"}
+                          onChange={(e) => assignItemToCollection(item.id, e.target.value, e)}
+                          className="text-[8px] bg-black/85 text-zinc-300 rounded border border-white/[0.1] px-0.5 py-0.5 cursor-pointer"
+                        >
+                          <option value="All">Move...</option>
+                          {collections.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Delete Item */}
                     <button
                       type="button"
@@ -852,8 +1162,34 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
               : "h-[min(510px,calc(100vh-100px))] w-[min(510px,calc(100vh-100px))] aspect-square"
           }`}>
             
-            {/* When image has been generated */}
-            {image_url !== "/" ? (
+            {/* Multi-Grid Variations Rendering (Midjourney Style) */}
+            {batchImages.length > 1 && !showCompare ? (
+              <div className={`w-full h-full grid p-2 gap-2 bg-black/90 ${
+                batchImages.length === 2 ? "grid-cols-2" : "grid-cols-2 grid-rows-2"
+              }`}>
+                {batchImages.map((bUrl, idx) => (
+                  <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/[0.08] bg-zinc-900">
+                    <img src={bUrl} alt={`Variation ${idx + 1}`} className="w-full h-full object-cover" />
+                    
+                    {/* Hover Overlay with Action Buttons */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                      <span className="text-[11px] font-mono text-zinc-300">Variation {idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImage_url(bUrl);
+                          setBatchImages([]);
+                        }}
+                        className="px-3 py-1 rounded bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium cursor-pointer shadow-sm flex items-center gap-1"
+                      >
+                        <Eye size={12} />
+                        <span>Isolate to Canvas</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : image_url !== "/" ? (
               showCompare && beforeImage ? (
                 /* Interactive Before / After Comparison Slider */
                 <BeforeAfterSlider
@@ -880,7 +1216,7 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                 </div>
                 <h2 className="text-base font-semibold text-white tracking-tight">Visual Studio Canvas</h2>
                 <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
-                  Enter a prompt or click "AI Expand" to start synthesizing with FLUX.1.
+                  Enter a prompt or click "Prompt Builder" to start synthesizing with FLUX.1.
                 </p>
                 <div className="mt-5 flex items-center gap-2 text-[11px] font-mono text-zinc-400 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                   <span>{selectedAspectRatio}</span>
@@ -914,8 +1250,19 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
 
             {/* Comprehensive Action Hub Bar on Bottom-Right */}
             {!isBusy && image_url !== "/" && (
-              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/85 backdrop-blur-md p-1.5 rounded-xl border border-white/[0.1] shadow-xl z-10">
+              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black/85 backdrop-blur-md p-1.5 rounded-xl border border-white/[0.1] shadow-xl z-10 flex-wrap max-w-full">
                 
+                {/* Inpainting & Object Magic Fill Brush */}
+                <button
+                  type="button"
+                  onClick={() => setIsInpaintOpen(true)}
+                  title="Inpainting / Object Eraser brush"
+                  className="text-zinc-300 hover:text-white hover:bg-white/[0.08] px-2 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                >
+                  <Paintbrush size={13} className="text-pink-400" />
+                  <span className="hidden sm:inline">Inpaint</span>
+                </button>
+
                 {/* 1-Click Studio Photo Editor */}
                 <button
                   type="button"
@@ -947,6 +1294,17 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
                 >
                   <Maximize2 size={13} className="text-emerald-400" />
                   <span className="hidden sm:inline">Upscale</span>
+                </button>
+
+                {/* Social Showcase Card Generator */}
+                <button
+                  type="button"
+                  onClick={() => setIsShareCardOpen(true)}
+                  title="Generate Canva-style Social Media Showcase Card"
+                  className="text-zinc-300 hover:text-white hover:bg-white/[0.08] px-2 py-1.5 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                >
+                  <Share2 size={13} className="text-amber-400" />
+                  <span className="hidden sm:inline">Card</span>
                 </button>
 
                 {/* Compare Split Toggle (if before image exists) */}
@@ -991,9 +1349,46 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
             )}
           </div>
 
+          {/* Color Palette Extractor & Harmony Bar (Underneath Canvas) */}
+          {dominantColors.length > 0 && !isBusy && (
+            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-3 p-2 px-3 rounded-xl bg-zinc-950/60 border border-white/[0.06] text-xs max-w-lg">
+              <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider">
+                Palette:
+              </span>
+              
+              <div className="flex items-center gap-1.5">
+                {dominantColors.map((color, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleCopyHex(color.hex)}
+                    title={`Click to copy ${color.hex}`}
+                    className="w-5 h-5 rounded-md border border-white/20 transition-transform hover:scale-125 cursor-pointer relative group shadow-xs"
+                    style={{ backgroundColor: color.hex }}
+                  >
+                    {copiedHex === color.hex && (
+                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-[9px] px-1 py-0.5 rounded shadow">
+                        Copied
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleInjectColorsIntoPrompt}
+                className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+                title="Lock this color harmony into prompt"
+              >
+                <span>Harmonize Prompt</span>
+              </button>
+            </div>
+          )}
+
           {/* Quick Caption underneath Canvas */}
           {currentPrompt && !isBusy && (
-            <div className="mt-3 text-xs text-zinc-400 italic truncate max-w-md w-full text-center px-4 flex items-center justify-center gap-2">
+            <div className="mt-2 text-xs text-zinc-400 italic truncate max-w-md w-full text-center px-4 flex items-center justify-center gap-2">
               <span className="truncate">"{currentPrompt}"</span>
               <button
                 type="button"
@@ -1020,6 +1415,43 @@ const ImageGenerator = ({ initialPrompt = "", onClearInitialPrompt }) => {
           setTimeout(() => setSuccessNotice(""), 3500);
         }}
       />
+
+      {/* Visual Prompt Builder Matrix Modal */}
+      <PromptBuilderModal
+        isOpen={isPromptBuilderOpen}
+        onClose={() => setIsPromptBuilderOpen(false)}
+        currentPrompt={promptText}
+        onApplyPrompt={(assembled) => {
+          setPromptText(assembled);
+          if (inputRef.current) inputRef.current.value = assembled;
+          setSuccessNotice("Assembled prompt applied to studio!");
+          setTimeout(() => setSuccessNotice(""), 3000);
+        }}
+      />
+
+      {/* AI Inpainting & Generative Fill Canvas Modal */}
+      <InpaintingCanvasModal
+        isOpen={isInpaintOpen}
+        onClose={() => setIsInpaintOpen(false)}
+        imageUrl={image_url}
+        onApplyResult={(inpaintOutput) => {
+          setImage_url(inpaintOutput);
+          setSuccessNotice("Inpainting generative fill applied to canvas!");
+          setTimeout(() => setSuccessNotice(""), 3500);
+        }}
+      />
+
+      {/* Social Media Showcase Card Studio Modal */}
+      <SocialShareCardModal
+        isOpen={isShareCardOpen}
+        onClose={() => setIsShareCardOpen(false)}
+        imageUrl={image_url}
+        promptText={currentPrompt}
+        modelName={modelsList.find(m => m.id === selectedModel)?.name}
+        seed={seed}
+        aspectRatio={selectedAspectRatio}
+      />
+
     </div>
   );
 };

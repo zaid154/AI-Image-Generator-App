@@ -1,7 +1,7 @@
 const API_BASE_URL = "http://localhost:5001";
 
 export const api = {
-  // Generate Image with FLUX.1 / SDXL / Anime
+  // Generate Image with FLUX.1 / SDXL / Anime (supports batchCount: 1, 2, 4)
   async generateImage(params) {
     const payload = typeof params === "string" ? { prompt: params } : params;
     const res = await fetch(`${API_BASE_URL}/generate-image`, {
@@ -10,8 +10,28 @@ export const api = {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok || !data.image) {
+    if (!res.ok || (!data.image && !data.images)) {
       throw new Error(data.error || "Image generation failed");
+    }
+    return data;
+  },
+
+  // AI Inpainting & Generative Fill
+  async inpaintImage({ image, mask, prompt }) {
+    const cleanImage = image.replace(/^data:image\/\w+;base64,/, "");
+    const cleanMask = mask ? mask.replace(/^data:image\/\w+;base64,/, "") : null;
+    const res = await fetch(`${API_BASE_URL}/inpaint-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: cleanImage,
+        mask: cleanMask,
+        prompt,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.image) {
+      throw new Error(data.error || "Inpainting generation failed");
     }
     return data;
   },

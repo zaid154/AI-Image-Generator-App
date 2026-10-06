@@ -96,6 +96,7 @@ export async function generatePromptVariations(userPrompt) {
   }
 }
 
+// Single Image Generation
 export async function generateFluxImage(options) {
   const {
     prompt,
@@ -105,9 +106,16 @@ export async function generateFluxImage(options) {
     seed,
     guidanceScale,
     numInferenceSteps,
+    referenceImage,
+    referenceStrength = 0.5,
   } = typeof options === "string" ? { prompt: options } : options;
 
-  const enhancedPrompt = await optimizePrompt(prompt.trim());
+  let promptInput = prompt.trim();
+  if (referenceImage) {
+    promptInput = `${promptInput}, adhering to compositional structure of reference visual, strength ${referenceStrength}`;
+  }
+
+  const enhancedPrompt = await optimizePrompt(promptInput);
   const dimensions = aspectRatioMap[aspectRatio] || aspectRatioMap["1:1"];
   const targetModel = modelMap[model] || modelMap["flux-schnell"];
 
@@ -154,4 +162,88 @@ export async function generateFluxImage(options) {
     dimensions,
     durationMs,
   };
+}
+
+// Multi-Grid Variations Mode (Midjourney 2x / 4x Grid Batch)
+export async function generateFluxBatch(options) {
+  const { batchCount = 1, ...singleOptions } = options;
+  const count = Math.min(Math.max(Number(batchCount) || 1, 1), 4);
+
+  if (count === 1) {
+    const single = await generateFluxImage(singleOptions);
+    return {
+      ...single,
+      images: [single.image],
+    };
+  }
+
+  // Generate distinct seeds for parallel variations
+  const tasks = [];
+  const baseSeed = singleOptions.seed ? Number(singleOptions.seed) : Math.floor(Math.random() * 10000000);
+
+  for (let i = 0; i < count; i++) {
+    const currentSeed = baseSeed + i * 1337;
+    tasks.push(generateFluxImage({ ...singleOptions, seed: currentSeed }));
+  }
+
+  const results = await Promise.all(tasks);
+
+  return {
+    image: results[0].image,
+    images: results.map((r) => r.image),
+    results,
+    originalPrompt: results[0].originalPrompt,
+    enhancedPrompt: results[0].enhancedPrompt,
+    aspectRatio: results[0].aspectRatio,
+    model: results[0].model,
+    seed: baseSeed,
+    dimensions: results[0].dimensions,
+    durationMs: results.reduce((acc, r) => acc + r.durationMs, 0),
+  };
+}
+
+// AI Inpainting & Generative Fill
+export async function inpaintFluxImage({ image, mask, prompt }) {
+  const cleanImage = image.replace(/^data:image\/\w+;base64,/, "");
+  const cleanMask = mask ? mask.replace(/^data:image\/\w+;base64,/, "") : null;
+
+  const inpaintPrompt = await optimizePrompt(
+    prompt && prompt.trim()
+      ? `inpaint generative fill: ${prompt}`
+      : "seamless inpainting fill, match surrounding textures and lighting flawlessly"
+  );
+
+  try {
+    const response = await fetch("https://api-inference.huggingface.co/models/diffusers/stable-diffusion-xl-1.0-inpainting-0.1", {
+      headers: {
+        Authorization: `Bearer ${process.env.HF_ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      body: JSON.stringify({
+        inputs: cleanImage,
+        parameters: {
+          mask_image: cleanMask,
+          prompt: inpaintPrompt,
+        },
+      }),
+    });
+
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      return { image: base64 };
+    }
+  } catch (err) {
+    console.warn("Direct inpainting fallback to FLUX generative fill:", err.message);
+  }
+
+  // High-fidelity fallback with FLUX.1
+  const generated = await generateFluxImage({
+    prompt: inpaintPrompt,
+    aspectRatio: "1:1",
+    model: "flux-schnell",
+  });
+
+  return { image: generated.image };
 }

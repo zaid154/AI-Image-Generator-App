@@ -1,7 +1,8 @@
 import { 
-  generateFluxImage, 
+  generateFluxBatch, 
   expandPromptAdvanced, 
-  generatePromptVariations 
+  generatePromptVariations,
+  inpaintFluxImage 
 } from "../services/generator.service.js";
 
 export async function handleGenerateImage(req, res) {
@@ -13,7 +14,10 @@ export async function handleGenerateImage(req, res) {
       model = "flux-schnell", 
       seed, 
       guidanceScale, 
-      numInferenceSteps 
+      numInferenceSteps,
+      batchCount = 1,
+      referenceImage,
+      referenceStrength = 0.5
     } = req.body;
 
     if (!prompt || !prompt.trim()) {
@@ -26,7 +30,7 @@ export async function handleGenerateImage(req, res) {
       });
     }
 
-    const result = await generateFluxImage({
+    const result = await generateFluxBatch({
       prompt,
       negativePrompt,
       aspectRatio,
@@ -34,6 +38,9 @@ export async function handleGenerateImage(req, res) {
       seed,
       guidanceScale,
       numInferenceSteps,
+      batchCount,
+      referenceImage,
+      referenceStrength,
     });
 
     res.json(result);
@@ -68,5 +75,20 @@ export async function handlePromptVariations(req, res) {
   } catch (error) {
     console.error("Prompt Variations error:", error);
     res.status(500).json({ error: error.message || "Variations generation failed" });
+  }
+}
+
+export async function handleInpaintImage(req, res) {
+  try {
+    const { image, mask, prompt } = req.body;
+    if (!image) {
+      return res.status(400).json({ error: "Source image is required for inpainting" });
+    }
+
+    const result = await inpaintFluxImage({ image, mask, prompt });
+    res.json(result);
+  } catch (error) {
+    console.error("Inpaint Image error:", error);
+    res.status(500).json({ error: error.message || "Inpainting generation failed" });
   }
 }
