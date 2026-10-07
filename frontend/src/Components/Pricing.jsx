@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, Info, X } from "lucide-react";
 
 const plans = [
@@ -56,8 +57,6 @@ const plans = [
     ]
   }
 ];
-
-import { useNavigate } from "react-router-dom";
 
 const Pricing = () => {
   const [modalMessage, setModalMessage] = useState(null);

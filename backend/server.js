@@ -1,43 +1,35 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-
-// Microservice Route Modules
-import generatorRoutes from "./routes/generator.routes.js";
-import bgRemoverRoutes from "./routes/bgRemover.routes.js";
-import upscalerRoutes from "./routes/upscaler.routes.js";
-import captionerRoutes from "./routes/captioner.routes.js";
+import generateRoutes from "./routes/generate.js";
+import toolsRoutes from "./routes/tools.js";
 
 dotenv.config();
 
 const app = express();
 
-// Global Middlewares
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// Health Check Endpoint
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
-    services: {
-      fluxGenerator: "online",
-      bgRemover: "online",
-      clarityUpscaler: "online",
-      blipCaptioner: "online",
-    },
     timestamp: new Date().toISOString(),
   });
 });
 
-// Mount Microservice Routes
-app.use(generatorRoutes);
-app.use(bgRemoverRoutes);
-app.use(upscalerRoutes);
-app.use(captionerRoutes);
+app.use(generateRoutes);
+app.use(toolsRoutes);
 
-// Server Activation
+app.use((err, req, res, next) => {
+  console.error(err);
+  const status = err.status || 500;
+  res.status(status).json({
+    error: err.message || "An unexpected error occurred",
+  });
+});
+
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`🚀 VividAI Microservice API running on Port ${PORT}`);
+  console.log(`VividAI backend running on port ${PORT}`);
 });

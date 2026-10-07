@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import "./index.css";
 import Navbar from "./Components/Navbar";
-import ImageGenerator from "./Components/Image Generator/ImageGenerator";
+import ImageGenerator from "./Components/ImageGenerator";
 import Gallery from "./Components/Gallery";
 import PromptGuide from "./Components/PromptGuide";
 import Pricing from "./Components/Pricing";
@@ -12,7 +12,7 @@ import LegalModal from "./Components/LegalModal";
 import BackgroundRemover from "./Components/Tools/BackgroundRemover";
 import ImageUpscaler from "./Components/Tools/ImageUpscaler";
 import ImageCaptioner from "./Components/Tools/ImageCaptioner";
-import Sketchpad from "./Components/Sketchpad/Sketchpad";
+import Sketchpad from "./Components/Sketchpad";
 
 function App() {
   const [selectedPrompt, setSelectedPrompt] = useState("");

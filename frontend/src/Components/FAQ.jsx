@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
 
 const faqs = [
@@ -27,8 +28,6 @@ const faqs = [
     a: "Structure your prompt with 4 clear elements: Subject (what you want to see), Environment (where it takes place), Lighting (e.g. golden hour or volumetric beam), and Medium (e.g. 85mm medium format or architectural photography). Check our Prompt Guide tab for practical examples."
   }
 ];
-
-import { useNavigate } from "react-router-dom";
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(0);

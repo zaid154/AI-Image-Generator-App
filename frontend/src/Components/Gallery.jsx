@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Check, ArrowRight } from "lucide-react";
 
-import img1 from "./Assets/claraundben-ai-generated-8622236_1920.jpg";
-import img2 from "./Assets/enchanted-forest-bridge-background.jpg";
-import img3 from "./Assets/jsjcreationsmm-ai-generated-8253173_1920.jpg";
-import img4 from "./Assets/majestic-mountain-peak-dusk-enchanting-travel-destination-generative-ai.jpg";
-import img5 from "./Assets/ralph_germany-ai-generated-8321924_1920.jpg";
-import img6 from "./Assets/sabrinabelle-girl-9271710_1920.jpg";
+import img1 from "../assets/gallery/claraundben-ai-generated-8622236_1920.jpg";
+import img2 from "../assets/gallery/enchanted-forest-bridge-background.jpg";
+import img3 from "../assets/gallery/jsjcreationsmm-ai-generated-8253173_1920.jpg";
+import img4 from "../assets/gallery/majestic-mountain-peak-dusk-enchanting-travel-destination-generative-ai.jpg";
+import img5 from "../assets/gallery/ralph_germany-ai-generated-8321924_1920.jpg";
+import img6 from "../assets/gallery/sabrinabelle-girl-9271710_1920.jpg";
 
 const galleryItems = [
   {

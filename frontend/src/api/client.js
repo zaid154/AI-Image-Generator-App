@@ -1,118 +1,58 @@
-const API_BASE_URL = "http://localhost:5001";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
+async function post(endpoint, body) {
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Request failed");
+  }
+  return data;
+}
 
 export const api = {
-  // Generate Image with FLUX.1 / SDXL / Anime (supports batchCount: 1, 2, 4)
   async generateImage(params) {
     const payload = typeof params === "string" ? { prompt: params } : params;
-    const res = await fetch(`${API_BASE_URL}/generate-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok || (!data.image && !data.images)) {
-      throw new Error(data.error || "Image generation failed");
-    }
-    return data;
+    return post("/generate-image", payload);
   },
 
-  // AI Inpainting & Generative Fill
   async inpaintImage({ image, mask, prompt }) {
     const cleanImage = image.replace(/^data:image\/\w+;base64,/, "");
     const cleanMask = mask ? mask.replace(/^data:image\/\w+;base64,/, "") : null;
-    const res = await fetch(`${API_BASE_URL}/inpaint-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: cleanImage,
-        mask: cleanMask,
-        prompt,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.image) {
-      throw new Error(data.error || "Inpainting generation failed");
-    }
-    return data;
+    return post("/inpaint-image", { image: cleanImage, mask: cleanMask, prompt });
   },
 
-  // AI Magic Expander: Expands simple prompt into rich visual description
   async expandPrompt(prompt) {
-    const res = await fetch(`${API_BASE_URL}/expand-prompt`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.expandedPrompt) {
-      throw new Error(data.error || "Failed to expand prompt");
-    }
-    return data.expandedPrompt;
+    const data = await post("/expand-prompt", { prompt });
+    return data.expandedPrompt || prompt;
   },
 
-  // Prompt Variations: Generates 3 creative styles for the prompt
   async getPromptVariations(prompt) {
-    const res = await fetch(`${API_BASE_URL}/prompt-variations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.variations) {
-      throw new Error(data.error || "Failed to generate variations");
-    }
-    return data.variations;
+    const data = await post("/prompt-variations", { prompt });
+    return data.variations || [];
   },
 
-  // Remove Background with RMBG 1.4
   async removeBackground(base64Image) {
     const clean = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    const res = await fetch(`${API_BASE_URL}/remove-background`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: clean }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.image) {
-      throw new Error(data.error || "Background removal failed");
-    }
-    return data;
+    return post("/remove-background", { image: clean });
   },
 
-  // Upscale Image with Clarity AI
   async upscaleImage(base64Image) {
     const clean = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    const res = await fetch(`${API_BASE_URL}/upscale-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: clean }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.image) {
-      throw new Error(data.error || "Image upscaling failed");
-    }
-    return data;
+    return post("/upscale-image", { image: clean });
   },
 
-  // Extract Prompt Caption with BLIP AI
   async captionImage(base64Image) {
     const clean = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    const res = await fetch(`${API_BASE_URL}/caption-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: clean }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.caption) {
-      throw new Error(data.error || "Prompt extraction failed");
-    }
-    return data;
+    return post("/caption-image", { image: clean });
   },
 
-  // Health Check
   async checkHealth() {
     const res = await fetch(`${API_BASE_URL}/health`);
-    return await res.json();
+    return res.json();
   },
 };
 
