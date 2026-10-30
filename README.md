@@ -7,7 +7,7 @@
 ## 👨‍💻 Developer & Author
 
 * **Developer Name**: Mohd Zaid
-* **Portfolio**: [portfolio-zeta-drab-97.vercel.app](https://portfolio-zeta-drab-97.vercel.app/)
+* **Portfolio**: [zaid-pro.vercel.app](https://zaid-pro.vercel.app/)
 * **GitHub**: [github.com/zaid154](https://github.com/zaid154)
 * **LinkedIn**: [linkedin.com/in/mohd-zaid-794090231/](https://www.linkedin.com/in/mohd-zaid-794090231/)
 * **Email**: [zaidm1323@gmail.com](mailto:zaidm1323@gmail.com)
