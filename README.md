@@ -39,11 +39,11 @@
 
 ```
 AI Image Generator App/
-├── backend/
+├── server/
 │   ├── server.js          # Express server & OpenAI API integration
 │   ├── package.json       # Backend dependencies
 │   └── .env               # Server environment variables
-├── frontend/
+├── client/
 │   ├── src/               # React components, UI styling & hooks
 │   ├── public/            # Static assets
 │   ├── package.json       # Frontend dependencies
@@ -57,7 +57,7 @@ AI Image Generator App/
 
 ### 1. Backend Setup
 ```bash
-cd backend
+cd server
 npm install
 npm start
 ```
